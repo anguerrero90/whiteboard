@@ -5,13 +5,17 @@ jQuery(function(){
 		alert('Sorry, it looks like your browser does not support canvas!');
 		return false;
 	}
-
+	
+	
 	// The URL of your web server (the port is set in app.js)
 	//var url = 'http://localhost:3000';
     var url = window.location.hostname;
+	var positionx ='20';
+	var positiony='0';
 
 	var doc = jQuery(document),
 		canvas = jQuery('#paper'),
+		canvas1 = jQuery('#paper1'),
 	instructions = jQuery('#instructions');
 var color = '#000000';
 	// A flag for drawing activity
@@ -22,6 +26,7 @@ var color = '#000000';
 	//  funzione richiesta di nick name   
 	
 	var username = '';
+				
 
 if(!username)
 {
@@ -29,10 +34,10 @@ if(!username)
 }
 
 username = username.substr(0,20);	
-
-	var socket = io.connect(url); 
+var socket = io.connect(url); 
 	
 var ctx = canvas[0].getContext('2d');	
+var ctx1 = canvas1[0].getContext('2d');	
 var spessore = jQuery('#spessore').value;
 var colorem;
     // Force canvas to dynamically change its size to the same width/height
@@ -43,7 +48,7 @@ var colorem;
     // ctx setup
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.lineWidth =  3;
+    ctx.lineWidth =  2;
  ctx.font = "20px Tahoma";
 
 	// Generate an unique ID
@@ -61,15 +66,54 @@ if (code == '13') {
 			});
  jQuery('<div class="testochat">ME ' + document.getElementById('scrivi').value +'</div>').appendTo('#testichat');
   document.getElementById('scrivi').value ='';
-	
-}}
 
+var objDiv = document.getElementById("testichat");
+objDiv.scrollTop = objDiv.scrollHeight;
+
+}}
+});
+
+$('#file-input').change(function(e) {
+        var file = e.target.files[0],
+            imageType = /image.*/;
+    if (!file.type.match(imageType))
+            return;
+
+        var reader = new FileReader();
+        reader.onload = fileOnload;
+    reader.readAsDataURL(file);  
+		     
+    });	
+
+/*
+jQuery('#salvasulserver').click(function (){
+var dataserver = canvas[0].toDataURL();
+
+socket.emit('salvasulserver',{
+				'id': id,
+				'dataserver': dataserver,
+				'orario':  jQuery.now()
+			});										  
+});
+
+*/
+
+jQuery('#vedomonitor').click(function (){
+if(document.getElementById('monitorcam').style.display == 'none')   { 
+document.getElementById("monitorcam").style.display = 'block';
+document.getElementById('vedomonitor').innerHTML = ' Hide webcam monitor ';
+} else  {
+document.getElementById('monitorcam').style.display = 'none';	
+document.getElementById('vedomonitor').innerHTML = ' Show webcam monitor ';
+}										  
 });
 
 jQuery('#paper').dblclick(function (e){
-
+positionx = e.pageX;
+positiony= e.pageY;
 if (document.getElementById('scrivi').value.length > 1 ) {
 ctx.fillStyle = $('#minicolore').minicolors('rgbaString');
+ctx.font =  document.getElementById('fontsize').value +"px Tahoma";
 ctx.fillText(document.getElementById('scrivi').value, e.pageX, e.pageY); 
 
 socket.emit('doppioclick',{
@@ -78,7 +122,8 @@ socket.emit('doppioclick',{
 				'scrivi': document.getElementById('scrivi').value,				
 				'color': $('#minicolore').minicolors('rgbaString'),
 				'id': id,
-				'spessremo' : document.getElementById('spessore').value
+				'spessremo' : document.getElementById('spessore').value,
+				'fontsizerem': document.getElementById('fontsize').value
 			});
 
 document.getElementById('scrivi').value ='';
@@ -95,9 +140,30 @@ window.open(document.getElementById("canvasimg").src, "toDataURL() image", "widt
  jQuery('#cancellalavagna').click(function (){
 ctx.clearRect(0, 0, canvas[0].width, canvas[0].height);													  
 });
+ 
+  socket.on('camperaltriser', function (data) {
+var camdaclient = new Image();
+camdaclient.src = data.camperaltridati;
+camdaclient.onload = function() {
+//	imgdaclient.src = data.fileperaltri;
+ctx.drawImage(camdaclient,data.positionx,data.positiony,320,240);
+}
+});	
+ 
+ 
+ socket.on('fileperaltriser', function (data) {
+ 
+var imgdaclient = new Image();
+imgdaclient.src = data.fileperaltri;
+imgdaclient.onload = function() {
+//	imgdaclient.src = data.fileperaltri;
+ctx.drawImage(imgdaclient, data.positionx, data.positiony);
+}
+});	
 	
  socket.on('doppioclickser', function (data) {
  ctx.fillStyle = data.color;
+ ctx.font = data.fontsizerem + "px Tahoma";
 	ctx.fillText(data.scrivi, data.x, data.y); 
           
 	});	
@@ -107,6 +173,8 @@ ctx.clearRect(0, 0, canvas[0].width, canvas[0].height);
 	//alert (data.testochat);
 jQuery('<div class="testochat">' + data.usernamerem +' '+ data.testochat +'</div>').appendTo('#testichat');         
 document.getElementById('frecce').style.backgroundColor ='#ffff00';
+var objDiv1 = document.getElementById("testichat");
+objDiv1.scrollTop = objDiv1.scrollHeight;
 	});	
  	
 	socket.on('moving', function (data) {
@@ -143,7 +211,7 @@ document.getElementById('frecce').style.backgroundColor ='#ffff00';
 
   //  document.addEventListener("touchstart", touchHandler, true);
   
- // document.addEventListener("blur", cambiacolore(), true);
+// document.addEventListener("blur", cambiacolore(), true);
 		  
    document.addEventListener("change", cambiaspessore, true);
   function cambiaspessore () {
@@ -200,7 +268,7 @@ document.getElementById('frecce').style.backgroundColor ='#ffff00';
     setInterval(function(){
         var totalOnline = 0;
         for(var ident in clients){
-            if(jQuery.now() - clients[ident].updated > 10000){
+            if(jQuery.now() - clients[ident].updated > 20000){
 
                 // Last update was more than 10 seconds ago.
                 // This user has probably closed the page
@@ -209,10 +277,15 @@ document.getElementById('frecce').style.backgroundColor ='#ffff00';
                 delete clients[ident];
                 delete cursors[ident];
             }
-            else totalOnline++;
-        }
-        jQuery('#onlineCounter').html('Players Connected: '+totalOnline);
-    },10000);
+            else {
+			 totalOnline++;
+			 if (document.getElementById('faisuonare').checked) {
+      var thissound=document.getElementById("audio1");
+thissound.play();												  
+			 }
+        }}
+        jQuery('#onlineCounter').html('Users connected: '+totalOnline);
+    },20000);
 
 	function drawLine(fromx, fromy, tox, toy){
 		ctx.strokeStyle = $('#minicolore').minicolors('rgbaString');
@@ -231,8 +304,93 @@ document.getElementById('frecce').style.backgroundColor ='#ffff00';
 		ctx.lineTo(tox, toy);
 		ctx.stroke();
 	}
+
+function fileOnload(e) {
+        var img = $('<img>', { src: e.target.result });
+		// alert(img.src.value);
+   //     var canvas1 = $('#paper')[0];
+      //     var context1 = canvas1.getContext('2d');
+        img.load(function() {
+            ctx.drawImage(this, positionx, positiony);
+			socket.emit('fileperaltri',{
+				'id': id,
+				'positionx': positionx,
+				'positiony': positiony,
+				'fileperaltri':  this.src
+				});	
+        });
+    }
 	
+(function() {
+
+  var streaming = false,
+      video        = document.getElementById('video'),
+  	paper1  = document.getElementById('paper1'),
+      startbutton  = document.getElementById('catturacam'),
+      width = 320,
+      height = 240;
+
+  navigator.getMedia = ( navigator.getUserMedia || 
+                         navigator.webkitGetUserMedia ||
+                         navigator.mozGetUserMedia ||
+                         navigator.msGetUserMedia);
+
+  navigator.getMedia(
+    { 
+      video: true, 
+      audio: false 
+    },
+    function(stream) {
+      if (navigator.mozGetUserMedia) { 
+        video.mozSrcObject = stream;
+      } else {
+        var vendorURL = window.URL || window.webkitURL;
+        video.src = vendorURL ? vendorURL.createObjectURL(stream) : stream;
+      }
+      video.play();
+    },
+    function(err) {
+      console.log("An error occured! " + err);
+    }
+  );
+
+  video.addEventListener('canplay', function(ev){
+    if (!streaming) {
+      height = video.videoHeight / (video.videoWidth/width);
+      video.setAttribute('width', 320);
+      video.setAttribute('height', 240);
+ //     canvas.setAttribute('width', width);
+   //   canvas.setAttribute('height', height);
+      streaming = true;
+    }
+	 video.setAttribute('width', 320);
+      video.setAttribute('height', 240);
+  }, false);
+
+  function takepicture(e) {
+ ctx.drawImage(video, positionx, positiony,320,240);
+ctx1.drawImage(video,0,0,320,240);
+var datacam = paper1.toDataURL('image/png');
+// paper1 e ctx1 servono per prelevare solo i dati della webcam e inviarli al server per gli altri	
+socket.emit('camperaltri',{
+				'id': id,
+				'positionx': positionx,
+				'positiony': positiony,
+				'camperaltridati':  datacam
+				});			 
+  }
+
+  startbutton.addEventListener('click', function(ev){
+												
+      takepicture();
+    ev.preventDefault();
+  }, false);
+
+})();
+
+
 
 
 });
 
+	
